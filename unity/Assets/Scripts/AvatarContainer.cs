@@ -328,8 +328,8 @@ namespace PoseTeacher
         Animator animator;
         public Transform CharacterRootTransform;
         Dictionary<JointId, Quaternion> absoluteOffsetMap;
-        public float OffsetY = 0.5f;
-        public float OffsetZ = -3.0f;
+        public float OffsetY = 1f;
+        public float OffsetZ = 0f;
 
         public RobotContainer(GameObject container, StickContainer stickSkeleton)
         {
@@ -390,7 +390,7 @@ namespace PoseTeacher
             animator = smpl_male.GetComponent<Animator>();
             CharacterRootTransform = smpl_male.transform.Find("m_avg_root");
 
-            absoluteOffsetMap = RiggingUtils.CreateOffsetMap(animator, CharacterRootTransform);
+            //absoluteOffsetMap = RiggingUtils.CreateOffsetMap(animator, CharacterRootTransform);
         }
 
         public void MovePerson(PoseData joint_data_list)

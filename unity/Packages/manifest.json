@@ -20,16 +20,19 @@
     "com.unity.2d.tilemap": "1.0.0",
     "com.unity.ads": "3.7.5",
     "com.unity.analytics": "3.6.11",
+    "com.unity.burst": "1.4.11",
     "com.unity.collab-proxy": "1.9.0",
     "com.unity.ide.rider": "2.0.7",
     "com.unity.ide.visualstudio": "2.0.11",
     "com.unity.ide.vscode": "1.2.4",
     "com.unity.purchasing": "3.2.2",
     "com.unity.recorder": "2.5.5",
+    "com.unity.render-pipelines.universal": "10.6.0",
     "com.unity.test-framework": "1.1.29",
     "com.unity.textmeshpro": "3.0.6",
     "com.unity.timeline": "1.4.8",
     "com.unity.ugui": "1.0.0",
+    "com.unity.visualeffectgraph": "10.6.0",
     "com.unity.xr.windowsmr": "4.5.0",
     "com.unity.modules.ai": "1.0.0",
     "com.unity.modules.androidjni": "1.0.0",
@@ -61,6 +64,7 @@
     "com.unity.modules.video": "1.0.0",
     "com.unity.modules.vr": "1.0.0",
     "com.unity.modules.wind": "1.0.0",
-    "com.unity.modules.xr": "1.0.0"
+    "com.unity.modules.xr": "1.0.0",
+    "com.microsoft.windows.mixedreality.dotnetwinrt": "file:MixedReality/com.microsoft.windows.mixedreality.dotnetwinrt-0.5.2009.tgz"
   }
 }
