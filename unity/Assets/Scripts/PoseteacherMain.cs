@@ -377,10 +377,14 @@ namespace PoseTeacher
                     playback_counter = 0;
                 }
 
+                // removed since poseteacher not in use anymore
+                // if function for poseteacher wanted see older commits 
+                /*
                 Debug.Log("avrg edd cost: " + scoreEDD.eddScore / scoreEDD.totalFrames + 
                     " total edd cost: " + scoreEDD.eddScore + " in time: " + scoreEDD.totalFrames);
                 // TODO: should this be called again? Or should we have a variable where the current teacher and self poses are saved? 
                 scoreEDD.Update(currentTeacherPose, currentPlayerPose);
+                */
 
                 // Get pose similarity
                 avatarSimilarity.Update(); // update similarity calculation with each update loop step

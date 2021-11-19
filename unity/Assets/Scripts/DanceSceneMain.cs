@@ -18,7 +18,7 @@ namespace PoseTeacher
         public GameObject avatarContainerSelf, avatarContainerTeacher;
         List<AvatarContainer> avatarListSelf, avatarListTeacher;
 
-        private readonly string fake_file = "jsondata/2020_05_27-00_01_59.txt";
+        private readonly string fake_file = "jsondata//2020_05_27-00_01_59.txt";
         public PoseInputSource selfPoseInputSource = PoseInputSource.KINECT;
 
         ScoringScript scoringUtil;

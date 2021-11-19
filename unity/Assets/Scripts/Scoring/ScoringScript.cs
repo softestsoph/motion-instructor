@@ -150,8 +150,33 @@ namespace PoseTeacher
 
         private float euclideanDistanceScore(PoseData currentSelfPose)
         {
-            //TODO: Implement EuclideanDistance
-            return 0;
+            ScoreEDD edd = new ScoreEDD();
+            List<Vector3> selfList = edd.PoseDataToVector3(currentSelfPose);
+            List<Vector3> goalList;
+
+            // calculate the distance from the currentGoal to currentSelfPose
+
+            // pose 
+            if (currentGoalType == GoalType.POSE)
+            {
+                goalList = edd.DancePoseToVector3(currentGoal[0]);
+            }
+            // motion
+            else
+            {
+                goalList = edd.DancePoseToVector3(currentGoal[goalCounter]);
+            }
+
+            // calculate the distance
+            double[,] scores = edd.Vector3ToScoreMatrix(goalList, selfList);
+            float scaling = 0.01f;
+            float average = 0f;
+            foreach (double value in scores)
+            {
+                average += (float)value * scaling;
+            }
+
+            return average / scores.Length;
         }
 
 
@@ -194,7 +219,19 @@ namespace PoseTeacher
             }
             else
             {
-                //TODO: Scoring for EuclideanDistance
+                //TODO: make scores more realistic and fun
+                if (tempScore < 0.2)
+                {
+                    scores.Add(Scores.GREAT);
+                }
+                else if (tempScore < 0.55)
+                {
+                    scores.Add(Scores.GOOD);
+                }
+                else
+                {
+                    scores.Add(Scores.BAD);
+                }
             }
 
             if (scoreDisplay != null)
@@ -333,35 +370,164 @@ namespace PoseTeacher
             previousFrames = pF;
         }
 
+        public List<Vector3> PoseDataToVector3(PoseData pose)
+        {
+            List<Vector3> list = new List<Vector3>();
+
+            Vector3 pos = new Vector3();
+            foreach (JointData joint in pose.data)
+            {
+                pos = joint.Position;
+                list.Add(pos);
+            }
+            return list;
+        }
+
+        public List<Vector3> DancePoseToVector3(DancePose pose)
+        {
+            List<Vector3> list = new List<Vector3>();
+
+            foreach (Vector3 pos in pose.positions)
+            {
+                list.Add(pos);
+            }
+            return list;
+        }
+
+
+        public double[,] CreateWeightMatrix()
+        {
+            /*
+            Found in PoseDataUtils.cs
+
+            // format in  lightweight-human-pose-estimation-3d-demo.pytorch
+            // Lightweight human pose estimation (https://github.com/Daniil-Osokin/lightweight-human-pose-estimation-3d-demo.pytorch) (Apache-2.0 License)
+
+            0: Neck
+            1: Nose
+            2: BodyCenter(center of hips)
+            3: lShoulder
+            4: lElbow
+            5: lWrist,
+            6: lHip
+            7: lKnee
+            8: lAnkle
+            9: rShoulder
+            10: rElbow
+            11: rWrist
+            12: rHip
+            13: rKnee
+            14: rAnkle
+            15: rEye
+            16: lEye
+            17: rEar
+            18: lEar
+            
+            
+            // format in Kinect Body Tracking SDK
+
+            HipLeft 18 KneeLeft 19 AnkleLeft 20
+            HipRight 22 KneeRight 23 AnkleRight 24
+            ShoulderLeft 5
+            ShoulderRight 12
+            HipLeft 18 HipRight 22
+            ElbowLeft 6 WristLeft 7
+            ElbowRight 13 WristRight 14
+            LeftEye 28
+            RightEye 30
+            Neck 3
+            Nose 27
+            Left Ear 29
+            Right Ear 31 
+            */
+
+            // after values from kinect body tracking 
+            double[,] weightMatrix = new double[32, 32];
+
+            // symetric matrix 
+            // code used to generate weightMatrix
+            for (int i = 0; i < 32; ++i)
+            {
+                for (int j = i; j < 32; ++j)
+                {
+                    // self weight
+                    if (i == j) { weightMatrix[i, j] = 1.0; }
+                    // ellbow or wrist
+                    else if (new double[] { 6, 7, 13, 14 }.Contains(i)) { weightMatrix[i, j] = 1.0; weightMatrix[j, i] = 1.0; }
+                    // knee and ankle
+                    else if (new double[] { 19, 20, 23, 24 }.Contains(i)) { weightMatrix[i, j] = 1.0; weightMatrix[j, i] = 1.0; }
+                    // shoulders
+                    else if (new double[] { 5, 12 }.Contains(i)) { weightMatrix[i, j] = 1.0; weightMatrix[j, i] = 1.0; }
+                    //hips
+                    else if (new double[] { 18, 22 }.Contains(i)) { weightMatrix[i, j] = 1.0; weightMatrix[j, i] = 1.0; }
+                }
+            }
+
+            return weightMatrix;
+        }
+
+        public double[,] weightMatrix = {
+            { 1, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0 },
+            { 0, 1, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0 },
+            { 0, 0, 1, 0, 0, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0 },
+            { 0, 0, 0, 1, 0, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0 },
+            { 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0 },
+            { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
+            { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
+            { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
+            { 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0 },
+            { 0, 0, 0, 0, 0, 1, 1, 1, 0, 1, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0 },
+            { 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0 },
+            { 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0 },
+            { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
+            { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
+            { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
+            { 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0 },
+            { 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0 },
+            { 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0 },
+            { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
+            { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
+            { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
+            { 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0 },
+            { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
+            { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
+            { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
+            { 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0 },
+            { 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0 },
+            { 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1, 0, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0 },
+            { 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1, 0, 1, 1, 1, 0, 0, 0, 1, 0, 0, 0 },
+            { 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1, 0, 1, 1, 1, 0, 0, 0, 0, 1, 0, 0 },
+            { 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 1, 0 },
+            { 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1 } };
 
         // Euclidean Distance Differences 
-        public double[,] ScoreMatrix(PoseData teacherPoseData, PoseData playerPoseData)
+        public double[,] Vector3ToScoreMatrix(List<Vector3> teacherPositions, List<Vector3> playerPositions)
         {
             // scaling such that the score isnt to high
             double scaling = 1;
 
             // center the pose joints to the hip middle (this will be 0, 0, 0)
             // body centre is joint[2]
-            Vector3 centreTeacher = teacherPoseData.data[2].Position;
-            Vector3 centrePlayer = playerPoseData.data[2].Position;
+            Vector3 centreTeacher = teacherPositions[2];
+            Vector3 centrePlayer = playerPositions[2];
 
             //Debug.Log("Number of teacher poses: " + teacherPoseData.data.Length);
             //Debug.Log("Number of player poses:  " + playerPoseData.data.Length);
 
             // iterate over all joints
             // and get their respective distance
-            double[,] scoreMatrix = new double[teacherPoseData.data.Length, playerPoseData.data.Length];
-            double[,] distanceTT = new double[teacherPoseData.data.Length, teacherPoseData.data.Length];
-            double[,] distanceTP = new double[teacherPoseData.data.Length, playerPoseData.data.Length];
+            double[,] scoreMatrix = new double[teacherPositions.Count, playerPositions.Count];
+            double[,] distanceTT = new double[teacherPositions.Count, teacherPositions.Count];
+            double[,] distanceTP = new double[teacherPositions.Count, playerPositions.Count];
 
             // distance between teacher and player
             int i = 0, j = 0;
-            foreach (JointData teacherJoint in teacherPoseData.data)
+            foreach (Vector3 posT in teacherPositions)
             {
                 j = 0;
-                foreach(JointData playerJoint in playerPoseData.data)
+                foreach (Vector3 posP in playerPositions)
                 {
-                    double distance = Math.Abs(Vector3.Distance(teacherJoint.Position - centreTeacher, playerJoint.Position - centrePlayer)) * scaling;
+                    double distance = Math.Abs(Vector3.Distance(posT - centreTeacher, posP - centrePlayer)) * scaling;
                     distanceTP[i, j] = distance;
                     j++;
                 }
@@ -371,76 +537,27 @@ namespace PoseTeacher
             // distance between teacher and teacher
             // and difference between self distance and t-p distance
             i = 0; j = 0;
-            foreach (JointData teacherJoint1 in teacherPoseData.data)
+            foreach (Vector3 posT1 in teacherPositions)
             {
                 j = 0;
-                foreach (JointData teacherJoint2 in teacherPoseData.data)
+                foreach (Vector3 posT2 in teacherPositions)
                 {
                     // centering not needed here, relative distance is the same.
-                    double distance = Math.Abs(Vector3.Distance(teacherJoint1.Position, teacherJoint2.Position)) * scaling;
+                    double distance = Math.Abs(Vector3.Distance(posT1, posT2)) * scaling;
                     distanceTT[i, j] = distance;
                     scoreMatrix[i, j] = Math.Abs(distance - distanceTP[i, j]);
+
+                    // weighting mechanism. use already initialized matrix, otherwise too expensive
+                    scoreMatrix[i, j] = scoreMatrix[i, j] * weightMatrix[i, j];
 
                     j++;
                 }
                 i++;
             }
 
-            // NOTE: introduce some weighting mechanism if wanted (or make it a own function)
-
             return scoreMatrix;
         }
 
-
-        // Calculate the average Euclidean Distance Differences (EDD) of the player for the last numberPreviousFrames
-        // 0 best score. if wrong higher, on average wrong movement around 100. on average good movement around 10?
-        public double EDDOverTime(int numberPreviousFrames, PoseData player)
-        {
-            // scaling such that the score isnt to high
-            double scaling = 0.001;
-            double average = 0;
-
-            int listLength = teacherPoses.Count;
-            //Debug.Log("Number of teacher frames: " + listLength);
-            if(listLength <= numberPreviousFrames)
-            {
-                foreach(PoseData teacher in teacherPoses)
-                {
-                    double[,] score = ScoreMatrix(teacher, player);
-                    foreach(double value in score)
-                    {
-                        //Debug.Log("value in score matrix: " + value);
-                        average += value*scaling;
-                    }
-                //Debug.Log("average after row: " + average);
-                }
-                average /= listLength;
-            }
-
-            else
-            {
-                for(int i = numberPreviousFrames; i > 0; --i)
-                {
-                    double[,] score = ScoreMatrix(teacherPoses[listLength - i], player);
-                    foreach (double value in score)
-                    {
-                        //Debug.Log("value in score matrix: " + value);
-                        average += value*scaling;
-                    }
-                    //Debug.Log("average after row: " + average);
-                }
-                average /= numberPreviousFrames;
-            }
-
-            return average;
-        }
-
-        public void Update(PoseData teacher, PoseData player)
-        {
-            teacherPoses.Add(teacher);
-            eddScore += EDDOverTime(previousFrames, player);
-            totalFrames++;
-        }
 
 
     }
