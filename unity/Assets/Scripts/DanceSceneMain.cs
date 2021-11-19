@@ -40,8 +40,18 @@ namespace PoseTeacher
             avatarListSelf.Add(new AvatarContainer(avatarContainerSelf));
             avatarListTeacher.Add(new AvatarContainer(avatarContainerTeacher));
 
-            selfPoseInputGetter = new PoseInputGetter(selfPoseInputSource) { ReadDataPath = dance_file };
-            teacherPoseInputGetter = new PoseInputGetter(PoseInputSource.FILE) { ReadDataPath = dance_file };
+            audioSource = GetComponent<AudioSource>();
+            song = DancePerformanceObject.SongObject.SongClip;
+            audioSource.clip = song;
+            danceData = DancePerformanceObject.danceData.LoadDanceDataFromScriptableObject();
+
+            for(int i = 0; i < DancePerformanceObject.goals.Count; i++)
+            {
+                goals.Add((DancePerformanceObject.goalTimestamps[i], DancePerformanceObject.goals[i].LoadDanceDataFromScriptableObject()));
+            }
+
+
+            selfPoseInputGetter = new PoseInputGetter(selfPoseInputSource) { ReadDataPath = fake_file };
             selfPoseInputGetter.loop = true;
             teacherPoseInputGetter.loop = false;
 
