@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using System.IO;
 using System.Linq;
+using TMPro;
 
 namespace PoseTeacher
 {
@@ -14,6 +15,9 @@ namespace PoseTeacher
         PoseGetter selfPoseInputGetter;
 
         public GameObject videoCube;
+        public GameObject cube;
+        public GameObject text;
+        private TextMeshPro textMesh;
 
         public GameObject avatarContainerSelf;
         List<AvatarContainer> avatarListSelf;
@@ -45,6 +49,9 @@ namespace PoseTeacher
             avatarListSelf.Add(new AvatarContainer(avatarContainerSelf));
 
             selfPoseInputGetter = getPoseGetter(selfPoseInputSource);
+
+            textMesh = text.GetComponent<TextMeshPro>();
+            textMesh.text = "Go to the cube.";
         }
 
         // Update is called once per frame
@@ -52,6 +59,27 @@ namespace PoseTeacher
         {
             currentSelfPose = selfPoseInputGetter.GetNextPose();
             AnimateSelf(currentSelfPose);
+            //Debug.Log(avatarListSelf[0].stickContainer.GetReferencePosition());
+            check_if_hit_cube();
+            
+        }
+
+        public void check_if_hit_cube()
+        {
+            Vector3 cube_position = cube.transform.position;
+            Vector3 own_position = avatarListSelf[0].stickContainer.GetReferencePosition();
+            bool x_hit = Mathf.Abs(cube_position.x - own_position.x) <= 0.1;
+            bool y_hit = Mathf.Abs(cube_position.y - own_position.y) <= 0.2;
+            bool z_hit = Mathf.Abs(cube_position.z - own_position.z) <= 0.1;
+            Debug.Log("x: " + Mathf.Abs(cube_position.x - own_position.x));
+            Debug.Log("y: " + Mathf.Abs(cube_position.y - own_position.y));
+            Debug.Log("z: " + Mathf.Abs(cube_position.z - own_position.z));
+
+            if (x_hit && y_hit && z_hit)
+            {
+                textMesh.text = "Well done!";
+            }
+
         }
 
         public void OnApplicationQuit()
