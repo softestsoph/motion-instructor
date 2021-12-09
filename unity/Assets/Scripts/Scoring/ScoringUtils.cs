@@ -150,6 +150,20 @@ namespace PoseTeacher
             return list;
         }
 
+        public static double ScaleAndClampValue(double val, double scale)
+        {
+            val *= scale;
+            if(val < 0)
+            {
+                return 0;
+            }
+            else if (val > 1)
+            {
+                return 1;
+            }
+            return val;
+        }
+
 
         public static double[,] CreateEuclideanWeightMatrix()
         {
